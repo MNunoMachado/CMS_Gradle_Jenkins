@@ -1,0 +1,113 @@
+#!/usr/bin/env groovy
+
+def runCommand(command) {
+    if (isUnix()) {
+        sh command
+    } else {
+        bat command
+    }
+}
+
+node {
+    try {
+        stage('Checkout') {
+            echo 'Checkout...'
+            git credentialsId: 'ODSOFT1181719', url: 'https://NunoMachadoSWITCH@bitbucket.org/mei-isep/odsoft-20-21-mbs-g006.git'
+        }
+        stage('Build and Archive') {
+            echo 'Build and Archive...'
+            dir('odsoft/exercise2/component3/cms') {
+                runCommand('gradlew clean build -x test')
+                archiveArtifacts 'build/libs/*.war'
+            }
+        }
+        stage('Tomcat Server Init') {
+            echo 'Start Tomcat ...'
+            dir("${TOMCAT_HOME}/bin") {
+                if (isUnix()) {
+                    sh 'startup.sh'
+                } else {
+                    bat 'startup.bat'
+                }
+            }
+        }
+        stage('Javadoc') {
+            echo 'Javadoc ...'
+            dir('odsoft/exercise2/component3/cms') {
+                runCommand(' gradlew javadoc')
+                javadoc javadocDir: 'build/docs/javadoc', keepAll: false
+            }
+        }
+        stage('Unit Tests') {
+            echo 'Unit Tests...'
+            dir('odsoft/exercise2/component3/cms') {
+                runCommand('gradlew test')
+                junit 'build/test-results/test/*.xml'
+                publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: 'build/reports/test', reportFiles: 'index.html', reportName: 'HTML Report - Unit Tests', reportTitles: ''])
+            }
+        }
+
+        stage('Integration Tests') {
+            echo 'Integration Tests...'
+            dir('odsoft/exercise2/component3/cms') {
+                runCommand('gradlew integrationTest')
+                publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: 'build/reports/integrationTest', reportFiles: 'index.html', reportName: 'HTML Report - Integration Tests', reportTitles: ''])
+                jacoco execPattern: '**/**.exec'
+            }
+        }
+
+        stage('Mutation Tests') {
+            echo 'Mutaion Tests...'
+            dir('odsoft/exercise2/component3/cms') {
+                runCommand('gradlew pitest')
+                publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: 'build/reports/pitest', reportFiles: 'index.html', reportName: 'HTML Report - Mutation Tests', reportTitles: ''])
+            }
+        }
+
+        stage('Deploy war file') {
+            echo 'Deploy war...'
+            deploy adapters: [tomcat9(credentialsId: 'tomcat', path: '', url: 'http://localhost:8081')], contextPath: 'CMS', onFailure: false, war: 'odsoft/exercise2/component3/cms/build/libs/*.war'
+            retry(3) {
+                echo 'Executing smoke test ...'
+                runCommand('curl -v --fail http://localhost:8081/CMS/#!C1wContacts')
+            }
+            echo 'finish Deploy stage ...'
+        }
+
+        stage('UI Acceptance Manual Tests') {
+            echo 'Sending email...'
+            mail bcc: '', body: "Jenkins is waiting for your input. Please address the issue in ${BUILD_URL} !!", cc: '', from: '', replyTo: '', subject: 'ODSOFT EMAIL', to: '1181719@isep.ipp.pt'
+            echo 'Waiting for input ...'
+            timeout(time: 48, unit: 'HOURS') {
+                input message: 'UI Acceptance Manual Tests', parameters: [booleanParam(defaultValue: true, description: '''should we proceed to the next stage?
+						''', name: '')]
+            }
+        }
+
+        stage('CI - Tag Success') {
+            echo 'Adding TAG Success...'
+            runCommand("git tag -a Ex2Comp3-Build#${BUILD_NUMBER}-${currentBuild.currentResult} -m 'BuildSuccess'")
+            runCommand(' git push --tags')
+        }
+
+    }
+    catch (exception) {
+        echo 'Adding TAG Fail...'
+		currentBuild.result = 'FAIL'
+        runCommand("git tag -a Ex2Comp3-Build#${BUILD_NUMBER}-${currentBuild.currentResult} -m 'BuildFailed'")
+        runCommand(' git push  --tags')
+
+    }
+    finally {
+        stage('Tomcat shutdown') {
+            echo 'Shutting down the server...'
+            dir("${TOMCAT_HOME}/bin") {
+                if (isUnix()) {
+                    sh 'shutdown.sh'
+                } else {
+                    bat 'shutdown.bat'
+                }
+            }
+        }
+    }
+}

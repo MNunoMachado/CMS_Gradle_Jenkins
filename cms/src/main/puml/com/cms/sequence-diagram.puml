@@ -1,0 +1,42 @@
+@startuml class-diagram.png
+skinparam handwritten true
+skinparam monochrome true
+skinparam packageStyle rect
+skinparam defaultFontName FG Virgil
+skinparam shadowing false
+
+actor User
+participant ContactsView
+participant ContactsDialog
+participant EditContactPresenter
+participant Contact
+participant ContactsServiceImpl
+
+
+User -> ContactsView : add new Contact
+activate ContactsView
+create ContactsDialog
+ContactsView -> ContactsDialog : new
+activate ContactsDialog
+ContactsDialog -> ContactsView : displayDialog()
+User -> ContactsDialog : fill the dialog and press SAVE
+ContactsDialog -> EditContactPresenter : doSave()
+ deactivate ContactsDialog
+ activate EditContactPresenter
+create Contact
+EditContactPresenter -> Contact : new
+EditContactPresenter -> Contact : setFirstName ()
+EditContactPresenter -> Contact : setLastName ()
+EditContactPresenter -> Contact : setEmailAddress ()
+EditContactPresenter -> ContactsServiceImpl : addContact(Contact contact)
+activate ContactsServiceImpl
+ContactsServiceImpl --> EditContactPresenter : return contact
+deactivate ContactsServiceImpl
+
+ EditContactPresenter -> EditContactPresenter : onSuccess(Contact result)
+deactivate EditContactPresenter
+
+ContactsDialog --> User : shows user new list of contacts
+deactivate ContactsView
+
+@enduml

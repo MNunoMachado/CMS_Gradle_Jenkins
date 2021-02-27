@@ -1,0 +1,144 @@
+// (ATB)
+
+plugins {
+    id "fr.putnami.gwt" version "0.4.0"
+    id 'info.solidsoft.pitest' version '1.3.0'
+}
+
+apply plugin: 'war'
+apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'jacoco'
+
+//Java version compatibility to use when compiling Java source.
+sourceCompatibility = 1.8
+//Java version to generate classes for.
+targetCompatibility = 1.8
+//Script Version
+version = '1.0'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testCompile 'junit:junit:4.12'
+    testCompile 'org.easymock:easymock:2.5.2'
+    testCompile 'com.google.gwt:gwt-dev:2.8.1'
+    compile 'net.sourceforge.plantuml:plantuml:8001'
+
+
+}
+
+task renderPlantUml(type: RenderPlantUmlTask) {
+    println "Prepare renderPlantUml"
+}
+
+javadoc {
+    println "Prepare JAVADOC"
+    source = sourceSets.main.allJava
+    options.addStringOption("sourcepath", "")
+    options.overview = "src/main/javadoc/overview.html" // relative to source root
+}
+
+task copyDocsToJavadoc(type: Copy) {
+    from 'build/puml'
+    into 'build/docs/javadoc'
+}
+
+javadoc.dependsOn renderPlantUml
+javadoc.finalizedBy(copyDocsToJavadoc)
+
+// If we woant to use the default ant build inside gradle
+// ant.importBuild "build.xml"
+
+putnami {
+
+    module 'pt.isep.cms.Showcase'
+    //module 'com.google.gwt.sample.contacts.Contacts'
+
+    /** add gwt nature on eclipse project. require apply plugin: 'eclipse' to work. default : false*/
+    googlePluginEclipse = true
+
+    gwtVersion = '2.8.1'
+
+    compile {
+        sourceLevel = '1.8'
+    }
+
+    jetty {
+        /** enable debugging. */
+        debugJava = true
+        /** debug port to listen. */
+        debugPort = 8000
+        /** wait for debugger attachment. */
+        debugSuspend = false
+    }
+}
+
+// Jacoco
+jacocoTestReport {
+    reports {
+        xml.enabled false
+        csv.enabled false
+    }
+}
+
+// This task generates the coverage report for the integration tests.
+// Notice that it only includes data about the server code sice Jaccoco is not able to get data about cliente code that is transpiled to javascript
+task jacocoIntegrationReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
+    sourceSets sourceSets.main
+
+    executionData = files("${buildDir}/jacoco/integrationTest.exec")
+
+    reports {
+        html.enabled = true
+        xml.enabled = false
+        csv.enabled = false
+    }
+}
+
+// Integration Tests
+task integrationTest(type: Test) {
+    filter {
+        //all GWT unit tests, by naming convention
+        includeTestsMatching "*GWTTest*"
+    }
+    jacoco {
+        append = true
+        enabled = true
+        //classDumpFile = file("${buildDir}/jacoco/classpathdumps")
+
+        excludes = ["com/steadystate/**"]
+    }
+    // These Properties are required to run gwt integration tests
+    systemProperties['gwt.args'] = "-devMode -logLevel WARN -war www-test"
+}
+
+tasks.withType(Test) {
+    reports.html.destination = file("${reporting.baseDir}/${name}")
+}
+
+// Unit Tests
+test {
+    filter {
+        //all JRE unit tests, by naming convention
+        includeTestsMatching "*JRETest*"
+    }
+    jacoco {
+        append = true
+        enabled = true
+        //classDumpFile = file("${buildDir}/jacoco/classpathdumps")
+    }
+}
+
+test.finalizedBy(jacocoTestReport)
+integrationTest.finalizedBy(jacocoIntegrationReport)
+
+
+pitest {
+    targetClasses = ['pt.isep.cms.*']
+    excludedTestClasses = ['pt.isep.cms.GWTTest*']
+    outputFormats = ['XML', 'HTML']
+    timestampedReports = false
+}

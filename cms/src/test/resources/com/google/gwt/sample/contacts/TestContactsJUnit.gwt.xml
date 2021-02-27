@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module rename-to='testcontacts'>
+  <!-- Inherit our applications main module.                      -->
+  <inherits name='com.google.gwt.sample.contacts.Contacts'/>
+
+  <!-- Specify the path to any remote services.                   -->
+  <servlet path="/contacts/contactsService" class="com.google.gwt.sample.contacts.server.ContactsServiceImpl" />
+
+</module>

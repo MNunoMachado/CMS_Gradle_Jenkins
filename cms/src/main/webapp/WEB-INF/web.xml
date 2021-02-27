@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app>
+
+  <!-- Default page to serve -->
+  <welcome-file-list>
+    <welcome-file>Showcase.html</welcome-file>
+  </welcome-file-list>
+  
+  <!-- Servlets for the contacts -->
+  <servlet>
+    <servlet-name>contactsServiceServlet</servlet-name>
+    <servlet-class>pt.isep.cms.contacts.server.ContactsServiceImpl</servlet-class>
+  </servlet>
+  
+  <servlet-mapping>
+    <servlet-name>contactsServiceServlet</servlet-name>
+    <url-pattern>/showcase/contactsService</url-pattern>
+  </servlet-mapping>
+
+  <!-- Servlets for the warehouses -->
+  <servlet>
+    <servlet-name>warehousesServiceServlet</servlet-name>
+    <servlet-class>pt.isep.cms.warehouses.server.WarehousesServiceImpl</servlet-class>
+  </servlet>
+
+  <servlet-mapping>
+    <servlet-name>warehousesServiceServlet</servlet-name>
+    <url-pattern>/showcase/warehousesService</url-pattern>
+  </servlet-mapping>
+
+</web-app>

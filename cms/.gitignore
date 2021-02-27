@@ -1,0 +1,36 @@
+*.class
+
+# Package Files #
+# *.jar
+# *.war
+
+build/
+.gradle
+
+# gwt caches and compiled units #
+# war/gwt_bree/
+gwt-unitCache/
+
+# boilerplate generated classes #
+.apt_generated/
+
+# more caches and things from deploy #
+src/main/webapp/WEB-INF/deploy/
+src/main/webapp/WEB-INF/classes/
+src/main/gwt-unitCache/
+src/main/webapp/contacts/
+src/main/webapp/com.google.gwt.sample.contacts.Contacts.JUnit/
+
+
+#compilation logs
+# .gwt/
+
+#caching for already compiled files
+# gwt-unitCache/
+
+#gwt junit compilation files
+www-test/
+war/
+reports/
+
+/.idea/
